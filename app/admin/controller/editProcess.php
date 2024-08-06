@@ -30,17 +30,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") { // START: Cek apakah request method 
         for ($i = 0; $i < count($files['name']); $i++) {
             if ($files['error'][$i] === UPLOAD_ERR_OK) {
                 $tmp_name = $files['tmp_name'][$i];
-                $file_extension = pathinfo($files['name'][$i], PATHINFO_EXTENSION);
-                $random_name = generate_random_slug(12) . '.' . $file_extension;
-                $upload_dir = '../../../public/assets/images/destinations/'; 
-                $file_path = $upload_dir . $random_name;
+                $original_name = basename($files['name'][$i]);
+                $file_extension = pathinfo($original_name, PATHINFO_EXTENSION);
+                $new_name = generate_random_slug(12) . '.' . $file_extension; 
+                $upload_dir = '../../../public/assets/images/destinations/';
+                $file_path = $upload_dir . $new_name;
                 if (move_uploaded_file($tmp_name, $file_path)) {
-                    $image_names[] = $random_name; 
+                    $image_names[] = $new_name; 
                 }
             }
         }
     }
-    $image_names_str = implode(',', $image_names); // END: Proses upload gambar
+// END: Proses upload gambar
 
     $sql = "UPDATE destination SET 
                 destination_name = ?, 
@@ -56,12 +57,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") { // START: Cek apakah request method 
     $stmt->bind_param('siiidisii', $destination_name, $destination_price, $min_day, $max_day, $transport_price, $food_price, $destination_location, $best_seller, $id);
 
     if ($stmt->execute()) { // START: Cek jika eksekusi berhasil
-        if (!empty($image_names_str)) { // START: Proses penyimpanan gambar jika ada
+        if (!empty($image_names)) {
             $sql_images = "INSERT INTO destination_images (destination_id, images) VALUES (?, ?)";
             $stmt_images = $conn->prepare($sql_images);
-            $stmt_images->bind_param('is', $id, $image_names_str);
-            $stmt_images->execute();
-        } // END: Proses penyimpanan gambar jika ada
+            foreach ($image_names as $image_name) {
+                $stmt_images->bind_param('is', $id, $image_name);
+                $stmt_images->execute();
+            }
+            $stmt_images->close();
+        }// END: Proses penyimpanan gambar jika ada// END: Proses penyimpanan gambar jika ada
 
         $_SESSION['message'] = 'Destination updated successfully!';
         $_SESSION['message_type'] = 'success'; 
